@@ -41,7 +41,7 @@ const verifyToken = async (req, res, next) => {
     req.user = payload;
     next();
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(403).send("Forbidden");
   }
 };
@@ -52,6 +52,7 @@ async function run() {
 
     const db = client.db("medi-queue");
     const tutorsCollection = db.collection("tutors");
+    const bookingsCollection = db.collection("bookings");
     // add tutrs
     app.post("/api/tutors", verifyToken, async (req, res) => {
       try {
@@ -85,29 +86,85 @@ async function run() {
 
     // id toutor
     app.get("/api/tutors/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    
-    
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).send({ message: "Invalid Tutor ID" });
-    }
+      try {
+        const id = req.params.id;
 
-    const query = { _id: new ObjectId(id) };
-    const tutor = await tutorsCollection.findOne(query);
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ message: "Invalid Tutor ID" });
+        }
 
-    if (!tutor) {
-      return res.status(404).send({ message: "Tutor not found" });
-    }
+        const query = { _id: new ObjectId(id) };
+        const tutor = await tutorsCollection.findOne(query);
 
-    res.status(200).send(tutor);
-  } catch (error) {
-    res.status(500).send({ message: "Failed to fetch tutor details" });
-  }
-});
+        if (!tutor) {
+          return res.status(404).send({ message: "Tutor not found" });
+        }
 
-// bookign
+        res.status(200).send(tutor);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch tutor details" });
+      }
+    });
 
+    // bookign
+
+    app.post("/api/bookings", verifyToken, async (req, res) => {
+      try {
+        const { tutorId, studentName, studentEmail, studentPhone } = req.body;
+
+        if (req.user?.email !== studentEmail) {
+          return res.status(403).send({ message: "Forbidden Access" });
+        }
+
+        if (!ObjectId.isValid(tutorId)) {
+          return res.status(400).send({ message: "Invalid Tutor ID" });
+        }
+
+        const tutor = await tutorsCollection.findOne({
+          _id: new ObjectId(tutorId),
+        });
+        if (!tutor) {
+          return res.status(404).send({ message: "Tutor not found" });
+        }
+
+        const currentSlots = parseInt(tutor.totalSlot, 10);
+        if (isNaN(currentSlots) || currentSlots <= 0) {
+          return res.status(400).send({ message: "No available slots left." });
+        }
+
+        const currentDate = new Date();
+        const sessionDate = new Date(tutor.sessionStartDate);
+        if (currentDate < sessionDate) {
+          return res
+            .status(400)
+            .send({ message: "Booking is not available yet for this tutor" });
+        }
+
+        const bookingInfo = {
+          tutorId: new ObjectId(tutorId),
+          tutorName: tutor.name || tutor.tutorName,
+          studentName,
+          email: studentEmail,
+          phone: studentPhone,
+          status: "booked",
+          bookedAt: new Date(),
+        };
+
+        await bookingsCollection.insertOne(bookingInfo);
+
+        await tutorsCollection.updateOne(
+          { _id: new ObjectId(tutorId) },
+          { $set: { totalSlot: (currentSlots - 1).toString() } },
+        );
+
+        res
+          .status(201)
+          .send({ success: true, message: "Booking completed successfully" });
+      } catch (error) {
+        console.error("🔴 Booking Error:", error); // ব্যাকএন্ড টার্মিনালে আসল সমস্যা দেখার জন্য
+        res.status(500).send({ message: "Booking failed server side" });
+      }
+    });
     await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
