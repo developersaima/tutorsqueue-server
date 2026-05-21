@@ -82,6 +82,32 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch tutors" });
       }
     });
+
+    // id toutor
+    app.get("/api/tutors/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    
+    
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: "Invalid Tutor ID" });
+    }
+
+    const query = { _id: new ObjectId(id) };
+    const tutor = await tutorsCollection.findOne(query);
+
+    if (!tutor) {
+      return res.status(404).send({ message: "Tutor not found" });
+    }
+
+    res.status(200).send(tutor);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch tutor details" });
+  }
+});
+
+// bookign
+
     await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
