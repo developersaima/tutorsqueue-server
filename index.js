@@ -48,7 +48,7 @@ const verifyToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("medi-queue");
     const tutorsCollection = db.collection("tutors");
@@ -361,7 +361,7 @@ async function run() {
       const tutor = await tutorsCollection.find().limit(6).toArray();
       res.status(200).send(tutor);
     });
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
     // await client.close();
