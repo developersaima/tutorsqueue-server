@@ -41,6 +41,7 @@ const verifyToken = async (req, res, next) => {
     req.user = payload;
     next();
   } catch (error) {
+    console.log(error)
     return res.status(403).send("Forbidden");
   }
 };
