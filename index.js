@@ -50,10 +50,37 @@ async function run() {
     await client.connect();
 
     const db = client.db("medi-queue");
+    const tutorsCollection = db.collection("tutors");
+    // add tutrs
+    app.post("/api/tutors", verifyToken, async (req, res) => {
+      try {
+        const tutorData = req.body;
 
-    
-    
+        const result = await tutorsCollection.insertOne(tutorData);
 
+        res.status(201).send({ message: "Tutor added successfully", result });
+      } catch (error) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+    // get tutor
+    app.get("/api/tutors", async (req, res) => {
+      try {
+        const { startDate, endDate } = req.query;
+        let query = {};
+
+        if (startDate || endDate) {
+          query.sessionStartDate = {};
+          if (startDate) query.sessionStartDate.$gte = startDate;
+          if (endDate) query.sessionStartDate.$lte = endDate;
+        }
+
+        const result = await tutorsCollection.find(query).toArray();
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch tutors" });
+      }
+    });
     await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
   } finally {
