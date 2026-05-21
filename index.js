@@ -161,8 +161,72 @@ async function run() {
           .status(201)
           .send({ success: true, message: "Booking completed successfully" });
       } catch (error) {
-        console.error("🔴 Booking Error:", error); // ব্যাকএন্ড টার্মিনালে আসল সমস্যা দেখার জন্য
+        console.error(" Booking Error:", error); // ব্যাকএন্ড টার্মিনালে আসল সমস্যা দেখার জন্য
         res.status(500).send({ message: "Booking failed server side" });
+      }
+    });
+
+    // my bookigns
+    app.get("/api/my-bookings", verifyToken, async (req, res) => {
+      try {
+        const studentEmail = req.user?.email;
+
+        if (!studentEmail) {
+          return res.status(401).send({ message: "Unauthorized Access" });
+        }
+
+        const query = { email: studentEmail };
+        const result = await bookingsCollection.find(query).toArray();
+        
+        res.status(200).send(result);
+      } catch (error) {
+        console.error(" Error fetching my bookings:", error);
+        res.status(500).send({ message: "Failed to fetch bookings" });
+      }
+    });
+
+
+    // cancel bookings
+
+    app.patch("/api/bookings/:id/cancel", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const studentEmail = req.user?.email;
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ message: "Invalid Booking ID" });
+        }
+
+        const booking = await bookingsCollection.findOne({ _id: new ObjectId(id) });
+        if (!booking) {
+          return res.status(404).send({ message: "Booking not found" });
+        }
+
+        if (booking.email !== studentEmail) {
+          return res.status(403).send({ message: "Forbidden Access" });
+        }
+
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: { status: "canceled" },
+        };
+
+        const result = await bookingsCollection.updateOne(filter, updateDoc);
+
+        if (booking.tutorId) {
+          const tutorSlots = parseInt((await tutorsCollection.findOne({ _id: booking.tutorId }))?.totalSlot, 10);
+          if (!isNaN(tutorSlots)) {
+            await tutorsCollection.updateOne(
+              { _id: booking.tutorId },
+              { $set: { totalSlot: (tutorSlots + 1).toString() } }
+            );
+          }
+        }
+
+        res.status(200).send({ success: true, message: "Booking canceled successfully", result });
+      } catch (error) {
+        console.error(" Error canceling booking:", error);
+        res.status(500).send({ message: "Failed to cancel booking" });
       }
     });
     await client.db("admin").command({ ping: 1 });
