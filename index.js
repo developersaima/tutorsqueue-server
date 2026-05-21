@@ -177,14 +177,13 @@ async function run() {
 
         const query = { email: studentEmail };
         const result = await bookingsCollection.find(query).toArray();
-        
+
         res.status(200).send(result);
       } catch (error) {
         console.error(" Error fetching my bookings:", error);
         res.status(500).send({ message: "Failed to fetch bookings" });
       }
     });
-
 
     // cancel bookings
 
@@ -197,7 +196,9 @@ async function run() {
           return res.status(400).send({ message: "Invalid Booking ID" });
         }
 
-        const booking = await bookingsCollection.findOne({ _id: new ObjectId(id) });
+        const booking = await bookingsCollection.findOne({
+          _id: new ObjectId(id),
+        });
         if (!booking) {
           return res.status(404).send({ message: "Booking not found" });
         }
@@ -214,19 +215,147 @@ async function run() {
         const result = await bookingsCollection.updateOne(filter, updateDoc);
 
         if (booking.tutorId) {
-          const tutorSlots = parseInt((await tutorsCollection.findOne({ _id: booking.tutorId }))?.totalSlot, 10);
+          const tutorSlots = parseInt(
+            (await tutorsCollection.findOne({ _id: booking.tutorId }))
+              ?.totalSlot,
+            10,
+          );
           if (!isNaN(tutorSlots)) {
             await tutorsCollection.updateOne(
               { _id: booking.tutorId },
-              { $set: { totalSlot: (tutorSlots + 1).toString() } }
+              { $set: { totalSlot: (tutorSlots + 1).toString() } },
             );
           }
         }
 
-        res.status(200).send({ success: true, message: "Booking canceled successfully", result });
+        res.status(200).send({
+          success: true,
+          message: "Booking canceled successfully",
+          result,
+        });
       } catch (error) {
         console.error(" Error canceling booking:", error);
         res.status(500).send({ message: "Failed to cancel booking" });
+      }
+    });
+
+    app.get("/api/my-tutors", verifyToken, async (req, res) => {
+      try {
+        const userId = req.user.uid; // টোকেন থেকে পাওয়া ইউজারের আইডি
+        const query = { creatorId: userId }; // ইমেইলের বদলে আইডি দিয়ে ফিল্টার
+        const result = await tutorsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed" });
+      }
+    });
+    // UPDATE TUTOR
+    app.put("/api/tutors/:id", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const userId = req.user?.id; 
+        const updatedData = req.body;
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ message: "Invalid Tutor ID" });
+        }
+
+        // Find tutor
+        const tutor = await tutorsCollection.findOne({ _id: new ObjectId(id) });
+        if (!tutor) {
+          return res.status(404).send({ message: "Tutor not found" });
+        }
+
+       
+        if (tutor.userId && tutor.userId !== userId) {
+          return res
+            .status(403)
+            .send({
+              message: "Forbidden: You can only update your own tutor profile",
+            });
+        }
+
+        
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            name: updatedData.tutorName,
+            photo: updatedData.photo,
+            subject: updatedData.subject,
+            availableSlots: updatedData.availableSlots,
+            hourlyFee: updatedData.hourlyFee,
+            totalSlot: updatedData.totalSlot,
+            sessionStartDate: updatedData.sessionStartDate,
+            institution: updatedData.institution,
+            experience: updatedData.experience,
+            location: updatedData.location,
+            teachingMode: updatedData.teachingMode,
+          },
+        };
+
+        const result = await tutorsCollection.updateOne(filter, updateDoc);
+
+        if (result.modifiedCount > 0) {
+          res.status(200).send({
+            success: true,
+            message: "Tutor updated successfully",
+          });
+        } else {
+          res.status(400).send({
+            message: "No changes made or tutor data is already up to date",
+          });
+        }
+      } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).send({
+          message: "Failed to update tutor details",
+          error: error.message,
+        });
+      }
+    });
+
+    // DELETE TUTOR 
+    app.delete("/api/tutors/:id", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const userId = req.user?.id; 
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ message: "Invalid Tutor ID" });
+        }
+
+        // Find tutor
+        const tutor = await tutorsCollection.findOne({ _id: new ObjectId(id) });
+        if (!tutor) {
+          return res.status(404).send({ message: "Tutor not found" });
+        }
+
+        // ownership check
+        if (tutor.userId && tutor.userId !== userId) {
+          return res.status(403).send({
+            message: "Forbidden: You can only delete your own tutor profile",
+          });
+        }
+
+        // Delete tutor
+        const query = { _id: new ObjectId(id) };
+        const result = await tutorsCollection.deleteOne(query);
+
+        if (result.deletedCount > 0) {
+          res.status(200).send({
+            success: true,
+            message: "Tutor deleted successfully",
+          });
+        } else {
+          res.status(400).send({
+            message: "Failed to delete tutor",
+          });
+        }
+      } catch (error) {
+        console.error("Delete Error:", error);
+        res.status(500).send({
+          message: "Failed to delete tutor",
+          error: error.message,
+        });
       }
     });
     await client.db("admin").command({ ping: 1 });
