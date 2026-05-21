@@ -253,7 +253,7 @@ async function run() {
     app.put("/api/tutors/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
-        const userId = req.user?.id; 
+        const userId = req.user?.id;
         const updatedData = req.body;
 
         if (!ObjectId.isValid(id)) {
@@ -266,16 +266,12 @@ async function run() {
           return res.status(404).send({ message: "Tutor not found" });
         }
 
-       
         if (tutor.userId && tutor.userId !== userId) {
-          return res
-            .status(403)
-            .send({
-              message: "Forbidden: You can only update your own tutor profile",
-            });
+          return res.status(403).send({
+            message: "Forbidden: You can only update your own tutor profile",
+          });
         }
 
-        
         const filter = { _id: new ObjectId(id) };
         const updateDoc = {
           $set: {
@@ -314,11 +310,11 @@ async function run() {
       }
     });
 
-    // DELETE TUTOR 
+    // DELETE TUTOR
     app.delete("/api/tutors/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
-        const userId = req.user?.id; 
+        const userId = req.user?.id;
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({ message: "Invalid Tutor ID" });
         }
@@ -357,6 +353,13 @@ async function run() {
           error: error.message,
         });
       }
+    });
+
+    // get 6 tutotr
+
+    app.get("/api/tutor/feautured", async (req, res) => {
+      const tutor = await tutorsCollection.find().limit(6).toArray();
+      res.status(200).send(tutor);
     });
     await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB!");
