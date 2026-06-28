@@ -123,21 +123,38 @@ async function run() {
         const tutor = await tutorsCollection.findOne({
           _id: new ObjectId(tutorId),
         });
+
         if (!tutor) {
           return res.status(404).send({ message: "Tutor not found" });
         }
 
-        const currentSlots = parseInt(tutor.totalSlot, 10);
-        if (isNaN(currentSlots) || currentSlots <= 0) {
-          return res.status(400).send({ message: "No available slots left." });
+        const existingBooking = await bookingsCollection.findOne({
+          tutorId: new ObjectId(tutorId),
+          email: studentEmail,
+        });
+
+        if (existingBooking) {
+          return res.status(400).send({
+            message: "You already booked this tutor session",
+          });
         }
 
-        const currentDate = new Date();
-        const sessionDate = new Date(tutor.sessionStartDate);
-        if (currentDate < sessionDate) {
-          return res
-            .status(400)
-            .send({ message: "Booking is not available yet for this tutor" });
+        const currentSlots = parseInt(tutor.totalSlot, 10);
+
+        if (isNaN(currentSlots) || currentSlots <= 0) {
+          return res.status(400).send({
+            message: "No available slots left",
+          });
+        }
+
+        const currentDate = new Date().getTime();
+
+        const sessionDate = new Date(tutor.sessionStartDate).getTime();
+
+        if (currentDate >= sessionDate) {
+          return res.status(400).send({
+            message: "Booking is closed because the session has started",
+          });
         }
 
         const bookingInfo = {
@@ -154,23 +171,30 @@ async function run() {
 
         await tutorsCollection.updateOne(
           { _id: new ObjectId(tutorId) },
-          { $set: { totalSlot: (currentSlots - 1).toString() } },
+          {
+            $set: {
+              totalSlot: (currentSlots - 1).toString(),
+            },
+          },
         );
 
-        res
-          .status(201)
-          .send({ success: true, message: "Booking completed successfully" });
+        res.status(201).send({
+          success: true,
+          message: "Booking completed successfully",
+        });
       } catch (error) {
-        console.error(" Booking Error:", error); // ব্যাকএন্ড টার্মিনালে আসল সমস্যা দেখার জন্য
-        res.status(500).send({ message: "Booking failed server side" });
+        console.error(error);
+
+        res.status(500).send({
+          message: "Booking failed server side",
+        });
       }
     });
-
     // my bookigns
     app.get("/api/my-bookings", verifyToken, async (req, res) => {
       try {
         const studentEmail = req.user?.email;
-
+console.log(req?.user)
         if (!studentEmail) {
           return res.status(401).send({ message: "Unauthorized Access" });
         }
