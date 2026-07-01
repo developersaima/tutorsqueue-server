@@ -1,11 +1,11 @@
 
 ````md
-# MediQueue Server
+# TutorsQueue Server
 
-Backend server for the MediQueue Tutor Booking System.
+Backend server for the TutorsQueue Tutor Booking System.
 
 ## 🚀 Live API
-https://mediqueue-server.vercel.app
+https://TutorsQueue-server.vercel.app
 
 ## 📌 Features
 - JWT Protected Private Routes
@@ -60,9 +60,9 @@ npm run dev
 
 ## 🔗 Repository
 
-Client Repo: [https://github.com/developersaima/mediqueue-client](https://github.com/developersaima/mediqueue-client)
+Client Repo: [https://github.com/developersaima/TutorsQueue-client](https://github.com/developersaima/TutorsQueue-client)
 
-Server Repo: [https://github.com/developersaima/mediqueue-server](https://github.com/developersaima/mediqueue-server)
+Server Repo: [https://github.com/developersaima/TutorsQueue-server](https://github.com/developersaima/TutorsQueue-server)
 
 ## Saima Akter
 ```
