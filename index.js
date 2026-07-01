@@ -69,22 +69,30 @@ async function run() {
     });
     // get tutor
     app.get("/api/tutors", async (req, res) => {
-      try {
-        const { startDate, endDate } = req.query;
-        let query = {};
+  try {
+    const { startDate, endDate, search } = req.query;
+    let query = {};
 
-        if (startDate || endDate) {
-          query.sessionStartDate = {};
-          if (startDate) query.sessionStartDate.$gte = startDate;
-          if (endDate) query.sessionStartDate.$lte = endDate;
-        }
 
-        const result = await tutorsCollection.find(query).toArray();
-        res.status(200).send(result);
-      } catch (error) {
-        res.status(500).send({ message: "Failed to fetch tutors" });
-      }
-    });
+    if (startDate || endDate) {
+      query.sessionStartDate = {};
+      if (startDate) query.sessionStartDate.$gte = startDate;
+      if (endDate) query.sessionStartDate.$lte = endDate;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const result = await tutorsCollection.find(query).toArray();
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch tutors" });
+  }
+});
 
     // id toutor
     app.get("/api/tutors/:id", async (req, res) => {
@@ -302,7 +310,7 @@ async function run() {
         const filter = { _id: new ObjectId(id) };
         const updateDoc = {
           $set: {
-            name: updatedData.tutorName,
+            name: updatedData.name,
             photo: updatedData.photo,
             subject: updatedData.subject,
             availableSlots: updatedData.availableSlots,

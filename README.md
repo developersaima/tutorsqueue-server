@@ -4,8 +4,7 @@
 
 Backend server for the TutorsQueue Tutor Booking System.
 
-## 🚀 Live API
-https://TutorsQueue-server.vercel.app
+
 
 ## 📌 Features
 - JWT Protected Private Routes
