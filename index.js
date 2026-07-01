@@ -56,11 +56,13 @@ async function run() {
     // add tutrs
     app.post("/api/tutors", verifyToken, async (req, res) => {
       try {
-        const tutorData = req.body;
+        const tutorData = { ...req.body, creatorId: req?.user.id };
 
         const result = await tutorsCollection.insertOne(tutorData);
-
-        res.status(201).send({ message: "Tutor added successfully", result });
+     
+        res
+          .status(201)
+          .send({ message: "Tutor added successfully", result });
       } catch (error) {
         res.status(500).send({ message: "Internal server error" });
       }
@@ -194,7 +196,6 @@ async function run() {
     app.get("/api/my-bookings", verifyToken, async (req, res) => {
       try {
         const studentEmail = req.user?.email;
-console.log(req?.user)
         if (!studentEmail) {
           return res.status(401).send({ message: "Unauthorized Access" });
         }
@@ -265,8 +266,9 @@ console.log(req?.user)
 
     app.get("/api/my-tutors", verifyToken, async (req, res) => {
       try {
-        const userId = req.user.uid; // টোকেন থেকে পাওয়া ইউজারের আইডি
-        const query = { creatorId: userId }; // ইমেইলের বদলে আইডি দিয়ে ফিল্টার
+        const userId = req.user.id;
+
+        const query = { creatorId: userId };
         const result = await tutorsCollection.find(query).toArray();
         res.send(result);
       } catch (error) {
